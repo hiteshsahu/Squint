@@ -1,8 +1,7 @@
-// Copyright 2026 Hitesh Kumar Sahu — https://hiteshsahu.com
-// SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
@@ -12,10 +11,16 @@ import (
 )
 
 func main() {
-	// L0 is read-only. Default to the mock source so squint runs on a laptop
-	// with no cluster in sight. The (stubbed) Live source will shell out to
-	// squeue/sacct/scontrol + DCGM once L0 graduates off mock data.
-	src := source.NewMock()
+	live := flag.Bool("live", false,
+		"read a real Slurm cluster (squeue + scontrol + nvidia-smi) instead of mock data")
+	flag.Parse()
+
+	// L0 is read-only either way. Mock runs anywhere; --live shells out to the
+	// cluster. GPU telemetry needs nvidia-smi on the host squint runs on.
+	var src source.Source = source.NewMock()
+	if *live {
+		src = source.NewLive()
+	}
 
 	// AltScreen for the full-screen TUI; mouse motion so the wheel scrolls the
 	// viewport. (Selecting text in this mode needs Shift/Option, per terminal.)

@@ -1,5 +1,3 @@
-// Copyright 2026 Hitesh Kumar Sahu — https://hiteshsahu.com
-// SPDX-License-Identifier: Apache-2.0
 package tui
 
 import (
@@ -126,6 +124,8 @@ func gpuCell(g model.GPU) string {
 	switch {
 	case !g.Allocated():
 		col, bot = dim, "free"
+	case !g.HasTelemetry:
+		col, bot = teal, "alloc"
 	case g.Squatting():
 		col, bot = coral, "IDLE"
 	case g.UtilPct >= 70:

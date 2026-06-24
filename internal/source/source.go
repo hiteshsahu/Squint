@@ -1,5 +1,3 @@
-// Copyright 2026 Hitesh Kumar Sahu — https://hiteshsahu.com
-// SPDX-License-Identifier: Apache-2.0
 package source
 
 import (
@@ -11,7 +9,7 @@ import (
 )
 
 // Source yields point-in-time cluster snapshots. Mock runs anywhere; Live
-// (stubbed for now) will shell out to squeue/sacct/scontrol + DCGM.
+// reads a real Slurm cluster via squeue/scontrol + GPU telemetry.
 type Source interface {
 	Snapshot(ctx context.Context) (*model.Snapshot, error)
 	Name() string
@@ -50,16 +48,13 @@ func (m *Mock) seed() {
 	n2 := mk("gpu-002", "ALLOCATED", 8)
 	n3 := mk("gpu-003", "MIXED", 8)
 
-	// gpu-001: alice running hot on 0-3, 4-7 free.
 	for i := 0; i <= 3; i++ {
-		n1.GPUs[i].JobID = "1042"
+		n1.GPUs[i].JobID = "1042" // alice running hot on 0-3
 	}
-	// gpu-002: bob holds ALL 8 but is squatting — the idle-shame shot.
 	for i := range n2.GPUs {
-		n2.GPUs[i].JobID = "1043"
+		n2.GPUs[i].JobID = "1043" // bob holds all 8 but squats — the shame shot
 	}
-	// gpu-003: carol running hot on 0-1, rest free.
-	n3.GPUs[0].JobID = "1044"
+	n3.GPUs[0].JobID = "1044" // carol on 0-1
 	n3.GPUs[1].JobID = "1044"
 
 	m.nodes = []model.Node{n1, n2, n3}
@@ -89,10 +84,10 @@ func clamp(v, lo, hi int) int {
 func (m *Mock) Snapshot(ctx context.Context) (*model.Snapshot, error) {
 	elapsed := time.Since(m.start)
 
-	// Jitter live GPUs so the heatmap breathes between ticks.
 	for ni := range m.nodes {
 		for gi := range m.nodes[ni].GPUs {
 			g := &m.nodes[ni].GPUs[gi]
+			g.HasTelemetry = true // the mock always has telemetry
 			switch {
 			case g.JobID == "": // free
 				g.UtilPct, g.MemUsedMB, g.TempC, g.PowerW = 0, 0, 31, 58
@@ -122,21 +117,3 @@ func (m *Mock) Snapshot(ctx context.Context) (*model.Snapshot, error) {
 
 	return &model.Snapshot{Jobs: jobs, Nodes: nodes, Taken: time.Now()}, nil
 }
-
-// ---------------------------------------------------------------------------
-// Live: the real source. Read-only by design — it only ever runs squeue,
-// sacct, scontrol (with --json where the Slurm version supports it) and reads
-// DCGM via dcgmi, falling back to nvidia-smi. Wired up next.
-// ---------------------------------------------------------------------------
-
-type Live struct{}
-
-func NewLive() *Live         { return &Live{} }
-func (l *Live) Name() string { return "live" }
-func (l *Live) Snapshot(ctx context.Context) (*model.Snapshot, error) {
-	return nil, errString("live source not implemented yet — see internal/source/source.go")
-}
-
-type errString string
-
-func (e errString) Error() string { return string(e) }

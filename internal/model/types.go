@@ -1,5 +1,3 @@
-// Copyright 2026 Hitesh Kumar Sahu — https://hiteshsahu.com
-// SPDX-License-Identifier: Apache-2.0
 package model
 
 import "time"
@@ -35,14 +33,18 @@ type GPU struct {
 	TempC      int
 	PowerW     int
 	JobID      string // owning job; "" when unallocated/free
+	// HasTelemetry reports whether Util/Mem/Temp/Power are real readings. When
+	// false we know allocation but not utilization, so we must NOT call an
+	// allocated GPU a squatter just because Util reads 0.
+	HasTelemetry bool
 }
 
 // Allocated reports whether a job currently holds this GPU.
 func (g GPU) Allocated() bool { return g.JobID != "" }
 
 // Squatting reports an allocated GPU doing essentially no work — the wasted
-// capacity squint exists to surface.
-func (g GPU) Squatting() bool { return g.Allocated() && g.UtilPct < 5 }
+// capacity squint exists to surface. Requires real telemetry to assert.
+func (g GPU) Squatting() bool { return g.Allocated() && g.HasTelemetry && g.UtilPct < 5 }
 
 // Node is a compute host and the GPUs attached to it.
 type Node struct {

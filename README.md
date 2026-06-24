@@ -8,20 +8,33 @@
 
 It's read-only by design: it only ever runs `squeue` / `sacct` / `scontrol` and reads DCGM. Nothing to trust it with, nothing it can break. Point it at a cluster and look.
 
+### Install
+
 ```bash
     # Install Squint
     brew install hiteshsahu/tap/squint   # (planned)
     
     go install github.com/hiteshsahu/squint@latest
+
 ```
 
-Then just:
-
-```bash
-  squint  
-```
+### Run
 
 No cluster handy? It ships with a mock source, so `squint` runs on your laptop out of the box.
+
+
+```bash
+squint          # mock data — runs anywhere
+squint --live   # read your real Slurm cluster
+
+```
+Keys: 
+- <kbd>q</kbd> quit 
+- <kbd>r</kbd> refresh (auto refresh every 2s)
+- <kbd>↑</kbd>/<kbd>↓</kbd>/<kbd>PgUp</kbd>/<kbd>PgDn</kbd>/wheel to scroll. 
+
+
+
 
 ---
 
@@ -47,20 +60,43 @@ That's the "who's squatting?" view every platform team wants and no Slurm tool g
 
 ---
 
-## Run from source
+## DEVELOP
 
-Requires **Go 1.22+**.
+- Requires **Go 1.22+**
 
+###  Install dependencies
 ```bash
     # Install dependencies
     go mod tidy
+```
+
+###  Build & Test
     
-    # Run the Engine
-    go run .
-    
+ ```bash  
     # Optional : Build & format before commit
     gofmt -w . && go build ./...
+    
+    # Formatting go file
+    gofmt -w . 
+    
+    # Linting
+    go vet ./... 
+    
+    # recursively compiles all packages
+    go build ./...   
+
 ```
+
+### Run 
+
+
+``` bash
+    # Run the Engine
+    go run .                 # mock
+    go run . --live          # real cluster
+    
+```
+
 
 ![Squint](./img/result.jpeg)
 
@@ -104,6 +140,8 @@ Keys: `q` quit · `r` refresh. Polls every 2s.
 
 Folder structure
 
+
+The Source interface is the whole seam: Mock and Live both implement it, and the TUI never knows which one it's talking to.
 
 ```bash
 
