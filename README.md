@@ -103,6 +103,19 @@ Tests are run as part of CI itself.
 
 Keys: `q` quit · `r` refresh. Polls every 2s.
 
+### 🧪 Testing
+
+Run test
+```bash
+go test ./... 
+
+# Test with coverage                      
+go test -race -coverprofile=coverage.out ./...
+
+# See code coverage
+go tool cover -func=coverage.out
+
+```
 
 ---
 
@@ -111,30 +124,30 @@ Keys: `q` quit · `r` refresh. Polls every 2s.
 
 ```text
 
-    ┌────────────────────────────────────────────┐
-    │                 Squint CLI                 │
-    │     submit • status • logs • dashboard     │
-    └──────────────────┬─────────────────────────┘
-                       │
-                       ▼
-    ┌────────────────────────────────────────────┐
-    │              Source Layer                  │
-    │  Mock Source • Slurm Source • Future APIs  │
-    └──────────────────┬─────────────────────────┘
-                       │
-                       ▼
-    ┌────────────────────────────────────────────┐
-    │             Scheduler Engine               │
-    │  Queue Analysis • Pending Explanation      │
-    │  GPU Allocation Insights                   │
-    └──────────────────┬─────────────────────────┘
-                       │
-                       ▼
-    ┌────────────────────────────────────────────┐
-    │                  Slurm                     │
-    │  squeue • sacct • sinfo • slurmrestd       │
-    └────────────────────────────────────────────┘
-    
+            ┌────────────────────────────────────────────┐
+            │                 Squint CLI                 │
+            │     submit • status • logs • dashboard     │
+            └──────────────────┬─────────────────────────┘
+                               │
+                               ▼
+            ┌────────────────────────────────────────────┐
+            │              Source Layer                  │
+            │  Mock Source • Slurm Source • Future APIs  │
+            └──────────────────┬─────────────────────────┘
+                               │
+                               ▼
+            ┌────────────────────────────────────────────┐
+            │             Scheduler Engine               │
+            │  Queue Analysis • Pending Explanation      │
+            │  GPU Allocation Insights                   │
+            └──────────────────┬─────────────────────────┘
+                               │
+                               ▼
+            ┌────────────────────────────────────────────┐
+            │                  Slurm                     │
+            │  squeue • sacct • sinfo • slurmrestd       │
+            └────────────────────────────────────────────┘
+            
 ```
 
 ## 📁 Folder structure
