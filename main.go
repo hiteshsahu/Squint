@@ -11,8 +11,9 @@ import (
 )
 
 func main() {
-	live := flag.Bool("live", false,
-		"read a real Slurm cluster (squeue + scontrol + nvidia-smi) instead of mock data")
+
+	// --live
+	live := flag.Bool("live", false, "read a real Slurm cluster (squeue + scontrol + nvidia-smi) instead of mock data")
 	flag.Parse()
 
 	// L0 is read-only either way. Mock runs anywhere; --live shells out to the
@@ -24,9 +25,15 @@ func main() {
 
 	// AltScreen for the full-screen TUI; mouse motion so the wheel scrolls the
 	// viewport. (Selecting text in this mode needs Shift/Option, per terminal.)
-	p := tea.NewProgram(tui.New(src), tea.WithAltScreen(), tea.WithMouseCellMotion())
-	if _, err := p.Run(); err != nil {
-		fmt.Fprintln(os.Stderr, "squint:", err)
+	program := tea.NewProgram(
+		tui.New(src),
+		tea.WithAltScreen(),
+		tea.WithMouseCellMotion())
+	if _, err := program.Run(); err != nil {
+		_, err := fmt.Fprintln(os.Stderr, "squint:", err)
+		if err != nil {
+			return
+		}
 		os.Exit(1)
 	}
 }

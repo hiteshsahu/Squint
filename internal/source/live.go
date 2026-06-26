@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -41,10 +42,87 @@ func (l *Live) Snapshot(ctx context.Context) (*model.Snapshot, error) {
 	var nodes []model.Node
 	if nodeOut, nerr := run(ctx, "scontrol", "show", "node", "--oneliner"); nerr == nil {
 		nodes = parseScontrolNodes(nodeOut)
+		assignJobsToNodes(jobs, nodes)
 		l.tel.Enrich(ctx, nodes)
 	}
 
 	return &model.Snapshot{Jobs: jobs, Nodes: nodes, Taken: time.Now()}, nil
+}
+
+func assignJobsToNodes(jobs []model.Job, nodes []model.Node) {
+	nodeJobs := map[string][]string{}
+	for _, node := range nodes {
+		for _, job := range jobs {
+			if job.State != model.Running {
+				continue
+			}
+			if jobRunsOnNode(job, node.Name) {
+				nodeJobs[node.Name] = append(nodeJobs[node.Name], job.ID)
+			}
+		}
+	}
+
+	for ni := range nodes {
+		if len(nodeJobs[nodes[ni].Name]) != 1 {
+			continue
+		}
+		jobID := nodeJobs[nodes[ni].Name][0]
+		for gi := range nodes[ni].GPUs {
+			if nodes[ni].GPUs[gi].Allocated() {
+				nodes[ni].GPUs[gi].JobID = jobID
+			}
+		}
+	}
+}
+
+func jobRunsOnNode(job model.Job, nodeName string) bool {
+	for _, token := range job.Nodes {
+		if compactHostlistContains(nodeName, token) {
+			return true
+		}
+	}
+	return false
+}
+
+func compactHostlistContains(nodeName, token string) bool {
+	nodeName = strings.TrimSpace(nodeName)
+	token = strings.TrimSpace(token)
+	if nodeName == token {
+		return true
+	}
+	open := strings.IndexByte(token, '[')
+	close := strings.IndexByte(token, ']')
+	if open < 0 || close < 0 || close <= open {
+		return false
+	}
+	prefix := token[:open]
+	suffix := token[close+1:]
+	ranges := strings.Split(token[open+1:close], ",")
+	for _, r := range ranges {
+		r = strings.TrimSpace(r)
+		if r == "" {
+			continue
+		}
+		if i := strings.IndexByte(r, '-'); i >= 0 {
+			lo, err1 := strconv.Atoi(r[:i])
+			hi, err2 := strconv.Atoi(r[i+1:])
+			if err1 != nil || err2 != nil || lo > hi {
+				continue
+			}
+			width := len(r[:i])
+			for v := lo; v <= hi; v++ {
+				candidate := prefix + fmt.Sprintf("%0*d", width, v) + suffix
+				if candidate == nodeName {
+					return true
+				}
+			}
+			continue
+		}
+		if prefix+r+suffix == nodeName {
+			return true
+		}
+	}
+	return false
 }
 
 // run executes a read-only command and returns stdout, surfacing stderr on

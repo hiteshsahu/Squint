@@ -10,12 +10,12 @@ import (
 )
 
 // squeueFormat is pipe-delimited so we can split cleanly. Fields:
-// id|name|user|state|partition|nodelist|gres|elapsed|timelimit|reason
+// id|name|user|state|partition|nodelist|gres|tres-per-node|elapsed|timelimit|reason
 //
-// NOTE: %b is the GRES field; on some Slurm versions the requested-GPU count
-// lives in tres-per-node instead. If GPU counts read as 0 on your cluster,
-// this is the token to swap (try --Format=tres-per-node).
-const squeueFormat = "%i|%j|%u|%T|%P|%N|%b|%M|%l|%r"
+// NOTE: %b is the GRES field and %B is the TRES-per-node field. Some Slurm
+// installations report GPU request counts in TRES instead of GRES, so we parse
+// both and fall back from GRES to TRES when needed.
+const squeueFormat = "%i|%j|%u|%T|%P|%N|%b|%B|%M|%l|%r"
 
 func parseSqueue(out string) []model.Job {
 	var jobs []model.Job
@@ -24,7 +24,7 @@ func parseSqueue(out string) []model.Job {
 			continue
 		}
 		f := strings.Split(line, "|")
-		if len(f) < 10 {
+		if len(f) < 11 {
 			continue
 		}
 		jobs = append(jobs, model.Job{
@@ -34,13 +34,20 @@ func parseSqueue(out string) []model.Job {
 			State:     mapState(f[3]),
 			Partition: strings.TrimSpace(f[4]),
 			Nodes:     splitNodes(f[5]),
-			GPUReq:    parseGPUCount(f[6]),
-			Elapsed:   parseSlurmDuration(f[7]),
-			TimeLimit: parseSlurmDuration(f[8]),
-			Reason:    cleanReason(f[9]),
+			GPUReq:    parseGPUCountWithFallback(strings.TrimSpace(f[6]), strings.TrimSpace(f[7])),
+			Elapsed:   parseSlurmDuration(f[8]),
+			TimeLimit: parseSlurmDuration(f[9]),
+			Reason:    cleanReason(f[10]),
 		})
 	}
 	return jobs
+}
+
+func parseGPUCountWithFallback(gres, tres string) int {
+	if cnt := parseGPUCount(gres); cnt > 0 {
+		return cnt
+	}
+	return parseGPUCount(tres)
 }
 
 func mapState(s string) model.JobState {
@@ -137,6 +144,9 @@ func parseScontrolNodes(out string) []model.Node {
 		kv := parseKV(line)
 		name := kv["NodeName"]
 		total := parseGPUCount(kv["Gres"])
+		if total == 0 {
+			total = parseGPUCount(kv["GresUsed"])
+		}
 		if name == "" || total == 0 {
 			continue // skip GPU-less nodes; this is a GPU monitor
 		}
