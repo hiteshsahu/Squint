@@ -23,26 +23,44 @@ It's read-only by design: it only ever runs `squeue` / `scontrol`, plus `nvidia-
 
 ### ▶️ Run
 
+### With Mocks
+
 No cluster handy? It ships with a mock source, so `squint` runs on your laptop out of the box.
 
 ```bash
     squint          # mock data — runs anywhere
-    squint --live   # read your real Slurm cluster
-
 ```
+
+![Squint Dashboard Mock](./img/result.jpeg)
+
+
 Keys: 
 - <kbd>q</kbd> quit 
 - <kbd>r</kbd> refresh (auto refresh every 2s)
 - <kbd>↑</kbd>/<kbd>↓</kbd>/<kbd>PgUp</kbd>/<kbd>PgDn</kbd>/wheel to scroll. 
 
-No real cluster to point `--live` at? [Caravan](https://github.com/hiteshsahu/caravan) bundles a real local Slurm cluster (controller + GPU compute nodes) into one CLI — no HPC access needed. `--live` needs `squeue`/`scontrol` on the machine it runs on, so build for Linux and run squint inside the controller container:
+
+### With Live Slurm Cluster
+
+
+```bash
+    squint --live   # read your real Slurm cluster
+```
+
+![](./img/live-dashboard.jpg)
+
+### No real cluster to point `--live` at? 
+
+[Caravan](https://github.com/hiteshsahu/caravan) bundles a real local Slurm cluster (controller + GPU compute nodes) into one CLI
 
 **macOS / Linux**
 ```bash
-    caravan cluster up                         # build + start a local Slurm cluster in Docker/Podman
-    GOOS=linux GOARCH=amd64 go build -o squint.linux .
-    docker cp squint.linux slurmctld:/usr/local/bin/squint
-    docker exec -it slurmctld squint --live
+     # start a local Slurm cluster in Docker/Podman
+    caravan cluster up     
+    # run a gpu workload
+    caravan submit workloads\long_running_example.sh
+    # monitor jobs                   
+    squint --live
 ```
 
 **Windows (PowerShell)**
@@ -130,7 +148,6 @@ Tests are run as part of CI itself.
 ```
 
 
-![Squint](./img/result.jpeg)
 
 Keys: `q` quit · `r` refresh. Polls every 2s.
 
